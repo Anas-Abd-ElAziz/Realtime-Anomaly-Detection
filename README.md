@@ -1,7 +1,5 @@
 ## Citation
 
-If you find this repo useful for your research, please consider citing our paper:
-
 ```bibtex
 @article{tian2021weakly,
   title={Weakly-supervised Video Anomaly Detection with Robust Temporal Feature Magnitude Learning},
