@@ -48,12 +48,12 @@ def set_up():
     #    print(name)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
-    checkpoint = torch.load(root + "ckpt/shanghai_best_ckpt.pkl", map_location=torch.device('cpu'))
+    checkpoint = torch.load(root + "ckpt/shanghai_best_ckpt.pkl", map_location=torch.device('cuda'))
     model.load_state_dict(checkpoint)
     return test_loader, model, args, device
 
 ################################################################
 def anomaly(frames):
-    feat_ex.generate(root + "Videos/", root +"features/", root + "I3D/pretrained/i3d_r50_kinetics.pth",4,10,"oversample")
+    features = feat_ex.generate(frames, root + "I3D/pretrained/i3d_r50_kinetics.pth",4,10,"oversample")
     test_loader, model, args, device = set_up()
-    return test(test_loader, model, args, device, root)
+    return test(test_loader, model, args, device, features)

@@ -16,27 +16,17 @@ from resnet import i3_res50
 import os
 
 
-def generate(datasetpath, outputpath, pretrainedpath, frequency, batch_size, sample_mode):
-	Path(outputpath).mkdir(parents=True, exist_ok=True)
-	temppath = outputpath+ "/temp/"
-	rootdir = Path(datasetpath)
-	videos = [str(f) for f in rootdir.glob('**/*.avi')]
-	# setup the model
+def generate(frames, pretrainedpath, frequency, batch_size, sample_mode):
 	i3d = i3_res50(400, pretrainedpath)
 	i3d.cuda()
 	i3d.train(False)  # Set model to evaluate mode
-	for video in videos:
-		videoname = video.split("\\")[-1].split(".")[0]
-		startime = time.time()
-		print("Generating for {0}".format(video))
-		Path(temppath).mkdir(parents=True, exist_ok=True)
-		ffmpeg.input(video).output('{}%d.jpg'.format(temppath),start_number=0).global_args('-loglevel', 'quiet').run()
-		print("Preprocessing done..")
-		features = run(i3d, frequency, temppath, batch_size, sample_mode)
-		np.save(outputpath + "/" + videoname, features)
-		print("Obtained features of size: ", features.shape)
-		shutil.rmtree(temppath)
-		print("done in {0}.".format(time.time() - startime))
+	startime = time.time()
+	print("Preprocessing done..")
+	features = run(frames, i3d, frequency, batch_size, sample_mode)
+	print("Obtained features of size: ", features.shape)
+	#shutil.rmtree(temppath)
+	print("done in {0}.".format(time.time() - startime))
+	return features
 
 if __name__ == '__main__': 
 	parser = argparse.ArgumentParser()
@@ -47,4 +37,4 @@ if __name__ == '__main__':
 	parser.add_argument('--batch_size', type=int, default=20)
 	parser.add_argument('--sample_mode', type=str, default="oversample")
 	args = parser.parse_args()
-	generate(args.datasetpath, str(args.outputpath), args.pretrainedpath, args.frequency, args.batch_size, args.sample_mode)    
+	generate(frames, args.pretrainedpath, args.frequency, args.batch_size, args.sample_mode)    

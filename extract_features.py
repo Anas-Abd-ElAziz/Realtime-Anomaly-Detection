@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 
 def load_frame(frame_file):
-	data = Image.open(frame_file)
+	data = frame_file
 	data = data.resize((340, 256), Image.ANTIALIAS)
 	data = np.array(data)
 	data = data.astype(float)
@@ -19,11 +19,11 @@ def load_frame(frame_file):
 	return data
 
 
-def load_rgb_batch(frames_dir, rgb_files, frame_indices):
+def load_rgb_batch(frames, frame_indices):
 	batch_data = np.zeros(frame_indices.shape + (256,340,3))
 	for i in range(frame_indices.shape[0]):
 		for j in range(frame_indices.shape[1]):
-			batch_data[i,j,:,:,:] = load_frame(os.path.join(frames_dir, rgb_files[frame_indices[i][j]]))
+			batch_data[i,j,:,:,:] = load_frame(frames[frame_indices[i][j]]) #load_frame(os.path.join(frames_dir, rgb_files[frame_indices[i][j]]))
 	return batch_data
 
 
@@ -46,7 +46,7 @@ def oversample_data(data):
 		data_f_1, data_f_2, data_f_3, data_f_4, data_f_5]
 
 
-def run(i3d, frequency, frames_dir, batch_size, sample_mode):
+def run(frames ,i3d, frequency, batch_size, sample_mode):
 	assert(sample_mode in ['oversample', 'center_crop'])
 	print("batchsize", batch_size)
 	chunk_size = 16
@@ -59,8 +59,7 @@ def run(i3d, frequency, frames_dir, batch_size, sample_mode):
 			features = i3d(inp)
 		return features.cpu().numpy()
 
-	rgb_files = natsorted([i for i in os.listdir(frames_dir)])
-	frame_cnt = len(rgb_files)
+	frame_cnt = len(frames) #24
 	# Cut frames
 	assert(frame_cnt > chunk_size)
 	clipped_length = frame_cnt - chunk_size
@@ -80,14 +79,14 @@ def run(i3d, frequency, frames_dir, batch_size, sample_mode):
 
 
 	for batch_id in range(batch_num): 
-		batch_data = load_rgb_batch(frames_dir, rgb_files, frame_indices[batch_id])
+		batch_data = load_rgb_batch(frames, frame_indices[batch_id])
 		if(sample_mode == 'oversample'):
-		   batch_data_ten_crop = oversample_data(batch_data)
-		   for i in range(10):
-			   assert(batch_data_ten_crop[i].shape[-2]==224)
-			   assert(batch_data_ten_crop[i].shape[-3]==224)
-			   temp = forward_batch(batch_data_ten_crop[i])
-			   full_features[i].append(temp)
+			batch_data_ten_crop = oversample_data(batch_data)
+			for i in range(10):
+				assert(batch_data_ten_crop[i].shape[-2]==224)
+				assert(batch_data_ten_crop[i].shape[-3]==224)
+				temp = forward_batch(batch_data_ten_crop[i])
+				full_features[i].append(temp)
 
 		elif(sample_mode == 'center_crop'):
 			batch_data = batch_data[:,:,16:240,58:282,:]
