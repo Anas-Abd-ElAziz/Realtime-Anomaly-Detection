@@ -10,10 +10,8 @@ import numpy as np
 import pyshine as ps
 from ultralytics import YOLO
 from queue import Queue, Empty
-import skvideo.io
 import Full_Path as RTFM
 from PIL import Image
-import torch
 root = ""
 
 class Window(QMainWindow):
@@ -23,7 +21,6 @@ class Window(QMainWindow):
         self.setWindowIcon(QtGui.QIcon('logo.ico'))
         self.setWindowTitle("Surveillance System")
         self.initialize_button()
-        #self.setGeometry(900, 900, 250, 150)
         self.started = False
         self.checkboxes = {
             "camera0": self.findChild(QCheckBox, "checkBox_0"),
@@ -33,7 +30,10 @@ class Window(QMainWindow):
             "camera4": self.findChild(QCheckBox, "checkBox_4"),
             "camera5": self.findChild(QCheckBox, "checkBox_5"),
         }
-        #self.yolo = YOLO("yolov8n.pt")
+        self.yolo_model = YOLO("yolov8n.pt")
+        self.yolo_model.predict(cv2.imread('logo.ico'), classes=0, verbose=False)
+
+
     def initialize_button(self):
         self.pushButton = self.findChild(QPushButton, "pushButton")
         self.pushButton.clicked.connect(self.pushButton_clicked)
@@ -46,20 +46,20 @@ class Window(QMainWindow):
             self.started = True
             self.pushButton.setText('Stop')
 
-        self.liveViewCamera0 = threading.Thread(target=self.loadVideo,  args=('liveView_0',f"testVids//normal1.avi", self.checkboxes["camera0"].isChecked()))
+        self.liveViewCamera0 = threading.Thread(target=self.loadVideo,  args=('liveView_0',f"testVids//normal1.avi", self.checkboxes["camera0"].isChecked(), self.yolo_model))
         self.liveViewCamera0.start()
-        self.liveViewCamera1 = threading.Thread(target=self.loadVideo,  args=('liveView_1',f"testVids//anomaly1.mp4", self.checkboxes["camera1"].isChecked()))
+        self.liveViewCamera1 = threading.Thread(target=self.loadVideo,  args=('liveView_1',f"testVids//anomaly1.mp4", self.checkboxes["camera1"].isChecked(), self.yolo_model))
         self.liveViewCamera1.start()
-        self.liveViewCamera2 = threading.Thread(target=self.loadVideo,  args=('liveView_2',f"testVids//normal2.mp4", self.checkboxes["camera2"].isChecked()))
+        self.liveViewCamera2 = threading.Thread(target=self.loadVideo,  args=('liveView_2',f"testVids//normal2.mp4", self.checkboxes["camera2"].isChecked(), self.yolo_model))
         self.liveViewCamera2.start()      
-        self.liveViewCamera3 = threading.Thread(target=self.loadVideo,  args=('liveView_3',f"testVids//normal3.mp4", self.checkboxes["camera3"].isChecked()))
+        self.liveViewCamera3 = threading.Thread(target=self.loadVideo,  args=('liveView_3',f"testVids//normal3.mp4", self.checkboxes["camera3"].isChecked(), self.yolo_model))
         self.liveViewCamera3.start()   
-        self.liveViewCamera4 = threading.Thread(target=self.loadVideo,  args=('liveView_4',f"testVids//normal4.avi", self.checkboxes["camera4"].isChecked()))
+        self.liveViewCamera4 = threading.Thread(target=self.loadVideo,  args=('liveView_4',f"testVids//normal4.avi", self.checkboxes["camera4"].isChecked(), self.yolo_model))
         self.liveViewCamera4.start()
-        self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked()))
-        #self.liveViewCamera5.start()
+        self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked(), self.yolo_model))
+        self.liveViewCamera5.start()
 
-    def loadVideo(self, video_label, video_source, enabled):
+    def loadVideo(self, video_label, video_source, enabled, shared_yolo_model):
         if not enabled:
             return
 
@@ -70,7 +70,10 @@ class Window(QMainWindow):
 
         def yolo_predict(image):
             nonlocal yolo_queue
-            num_objects = len(model.predict(image, classes=0, verbose=False)[0])
+            start_time = time.time()
+            num_objects = len(shared_yolo_model.predict(image, classes=0, verbose=False)[0])
+            end_time = time.time()
+            print("Execution time:", end_time - start_time, "seconds")
             try:
                 yolo_queue.put_nowait(num_objects)
             except Exception as e:
@@ -84,12 +87,11 @@ class Window(QMainWindow):
             except Exception as e:
                 pass
 
-
-        model = YOLO("yolov8n.pt")
         num_objects = 0
         anomaly_score = 0
         frame_buffer = []
         current_prediction=-1
+        first_frame = True
         
         while vid.isOpened() and self.started:
             QtWidgets.QApplication.processEvents()
@@ -98,21 +100,22 @@ class Window(QMainWindow):
                 vid.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
 
-
             frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(frame)
             frame_buffer.append(pil_img)
-
             image = imutils.resize(image, height=480)
-            if len(frame_buffer) == 24:
+
+            if len(frame_buffer) % 12 == 0:
                 yolo_thread = threading.Thread(target=yolo_predict, args=(image,))
                 yolo_thread.start()
+
+            if len(frame_buffer) == 24:
                 if current_prediction != anomaly_score:
                     anomaly_thread = threading.Thread(target=anomaly_predict, args=(frame_buffer,))
                     anomaly_thread.start()
                     current_prediction=anomaly_score
-
                 frame_buffer = []
+
             try:
                 num_objects = yolo_queue.get_nowait()
             except Empty:
@@ -147,3 +150,4 @@ if __name__ == '__main__':
     window = Window()
     window.show()
     exit(app.exec_())
+
