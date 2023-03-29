@@ -1,7 +1,7 @@
 from sys import argv, exit
 import threading
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QFileDialog, QCheckBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QFileDialog, QCheckBox, QWidget
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
 import cv2, imutils
@@ -12,13 +12,15 @@ from ultralytics import YOLO
 from queue import Queue, Empty
 import Full_Path as RTFM
 from PIL import Image
+import os
+os.environ['QT_LOGGING_RULES'] = "qt.gui.icc=false"
 root = ""
 
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi("gui.ui", self)
-        self.setWindowIcon(QtGui.QIcon('logo.ico'))
+        self.setWindowIcon(QtGui.QIcon('bus.jpg'))
         self.setWindowTitle("Surveillance System")
         self.initialize_button()
         self.started = False
@@ -37,6 +39,7 @@ class Window(QMainWindow):
     def initialize_button(self):
         self.pushButton = self.findChild(QPushButton, "pushButton")
         self.pushButton.clicked.connect(self.pushButton_clicked)
+
 
     def pushButton_clicked(self):
         if self.started:
@@ -139,7 +142,6 @@ class Window(QMainWindow):
             label.setPixmap(pixmap)
             label.setScaledContents(True)
 
-            count += 1
             time.sleep(0.024)  # add a delay of 42 milliseconds (1/24th of a second)
             
         vid.release()
@@ -150,4 +152,3 @@ if __name__ == '__main__':
     window = Window()
     window.show()
     exit(app.exec_())
-
