@@ -59,7 +59,10 @@ c2_blobs = {key: workspace.FetchBlob(key) for key in workspace.Blobs()}
 torch.backends.cudnn.enabled = False
 from models import resnet
 
-data = torch.from_numpy(data).cuda()
+if torch.cuda.is_available():
+    data = torch.from_numpy(data).cuda()
+else:
+    data = torch.from_numpy(data)
 
 # load pretrained weights
 if args.model=='r50':
@@ -69,7 +72,10 @@ elif args.model=='r50_nl':
     pth_net = resnet.i3_res50_nl(num_classes=400)
     key_map = torch.load('pretrained/i3d_r50_nl_kinetics.pth.keymap')
 key_map = {'.'.join(k.split('.')[:-1]): '_'.join(v.split('_')[:-1]) for k, v in key_map.items()}
-pth_net.cuda().eval()
+if torch.cuda.is_available():
+    pth_net.cuda().eval()
+else:
+    pth_net.eval()
     
 def hook(module, input, output):
     setattr(module, "_value_hook", output)

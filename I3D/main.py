@@ -18,7 +18,8 @@ import os
 
 def generate(frames, pretrainedpath, frequency, batch_size, sample_mode):
 	i3d = i3_res50(400, pretrainedpath)
-	i3d.cuda()
+	if torch.cuda.is_available():
+		i3d.cuda()
 	i3d.train(False)  # Set model to evaluate mode
 	startime = time.time()
 	print("Preprocessing done..")

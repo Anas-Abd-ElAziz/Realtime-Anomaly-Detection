@@ -48,7 +48,7 @@ def set_up():
     #    print(name)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
-    checkpoint = torch.load(root + "ckpt/shanghai_best_ckpt.pkl", map_location=torch.device('cuda'))
+    checkpoint = torch.load(root + "ckpt/shanghai_best_ckpt.pkl", map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
     model.load_state_dict(checkpoint)
     return test_loader, model, args, device
 

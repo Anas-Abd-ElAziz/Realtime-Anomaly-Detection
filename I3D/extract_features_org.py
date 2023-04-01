@@ -33,7 +33,10 @@ def run(i3d, frequency, frames_dir, batch_size=1):
 		b_data = b_data.transpose([0, 4, 1, 2, 3])
 		b_data = torch.from_numpy(b_data)   # b,c,t,h,w  # 40x3x16x224x224
 		with torch.no_grad():
-			b_data = Variable(b_data.cuda()).float()
+			if torch.cuda.is_available():
+				b_data = Variable(b_data.cuda()).float()
+			else:
+				b_data = Variable(b_data).float()
 			inp = {'frames': b_data}
 			features = i3d(inp)
 		return features.cpu().numpy()

@@ -11,14 +11,15 @@ def kinetics_mean_std():
 # Apply .cuda() to every element in the batch
 def batch_cuda(batch):
     _batch = {}
-    for k,v in batch.items():
-        if type(v)==torch.Tensor:
-            v = v.cuda()
-        elif type(v)==list and type(v[0])==torch.Tensor:
-            v = [v.cuda() for v in v]
-        _batch.update({k:v})
-
-    return _batch
+    if torch.cuda.is_available():
+        for k,v in batch.items():
+            if type(v)==torch.Tensor:
+                v = v.cuda()
+            elif type(v)==list and type(v[0])==torch.Tensor:
+                v = [v.cuda() for v in v]
+            _batch.update({k:v})
+        return _batch
+    return batch
 
 import utils.gtransforms as gtransforms
 def clip_transform(split, max_len):

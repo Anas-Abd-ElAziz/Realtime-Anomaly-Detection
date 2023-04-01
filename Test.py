@@ -49,21 +49,26 @@ class Window(QMainWindow):
         if self.started:
             self.started = False
             self.pushButton.setText('Start')
+            #for i in range(6):
+                #label = self.centralwidget.findChild(QLabel, f"liveView_{i}")
+                #label.clear()
+                #label.setText(f"main camera") if i == 0 else label.setText(f"camera {i}")
+            
         else:
             self.started = True
             self.pushButton.setText('Stop')
 
-        self.liveViewCamera0 = threading.Thread(target=self.loadVideo,  args=('liveView_0',f"testVids//normal1.avi", self.checkboxes["camera0"].isChecked(), self.yolo_model))
+        self.liveViewCamera0 = threading.Thread(target=self.loadVideo,  args=('liveView_0',f"testVids//normal1.avi", self.checkboxes["camera0"].isChecked()))
         self.liveViewCamera0.start()
-        self.liveViewCamera1 = threading.Thread(target=self.loadVideo,  args=('liveView_1',f"testVids//anomaly1.mp4", self.checkboxes["camera1"].isChecked(), self.yolo_model))
+        self.liveViewCamera1 = threading.Thread(target=self.loadVideo,  args=('liveView_1',f"testVids//anomaly1.mp4", self.checkboxes["camera1"].isChecked()))
         self.liveViewCamera1.start()
-        self.liveViewCamera2 = threading.Thread(target=self.loadVideo,  args=('liveView_2',f"testVids//normal2.mp4", self.checkboxes["camera2"].isChecked(), self.yolo_model))
+        self.liveViewCamera2 = threading.Thread(target=self.loadVideo,  args=('liveView_2',f"testVids//normal2.mp4", self.checkboxes["camera2"].isChecked()))
         self.liveViewCamera2.start()      
-        self.liveViewCamera3 = threading.Thread(target=self.loadVideo,  args=('liveView_3',f"testVids//normal3.mp4", self.checkboxes["camera3"].isChecked(), self.yolo_model))
+        self.liveViewCamera3 = threading.Thread(target=self.loadVideo,  args=('liveView_3',f"testVids//normal3.mp4", self.checkboxes["camera3"].isChecked()))
         self.liveViewCamera3.start()   
-        self.liveViewCamera4 = threading.Thread(target=self.loadVideo,  args=('liveView_4',f"testVids//normal4.avi", self.checkboxes["camera4"].isChecked(), self.yolo_model))
+        self.liveViewCamera4 = threading.Thread(target=self.loadVideo,  args=('liveView_4',f"testVids//normal4.avi", self.checkboxes["camera4"].isChecked()))
         self.liveViewCamera4.start()
-        self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked(), self.yolo_model))
+        self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked()))
         self.liveViewCamera5.start()
 
     def loadVideo(self, video_label, video_source, enabled, shared_yolo_model):
@@ -82,7 +87,6 @@ class Window(QMainWindow):
             nonlocal yolo_queue
             start_time = time.time()
             num_objects = len(yolo_model.predict(image, classes=0, verbose=False)[0])
-            #num_objects = len(shared_yolo_model.predict(image, classes=0, verbose=False)[0])
             end_time = time.time()
             print("Execution time:", end_time - start_time, "seconds")
             try:
