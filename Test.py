@@ -32,8 +32,6 @@ class Window(QMainWindow):
             "camera4": self.findChild(QCheckBox, "checkBox_4"),
             "camera5": self.findChild(QCheckBox, "checkBox_5"),
         }
-        self.yolo_model = YOLO("yolov8n.pt")
-        self.yolo_model.predict(cv2.imread('logo.ico'), classes=0, verbose=False)
 
     def closeEvent(self, event):
         self.started = False
@@ -71,7 +69,7 @@ class Window(QMainWindow):
         self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked()))
         self.liveViewCamera5.start()
 
-    def loadVideo(self, video_label, video_source, enabled, shared_yolo_model):
+    def loadVideo(self, video_label, video_source, enabled):
         if not enabled:
             return
 
@@ -152,9 +150,8 @@ class Window(QMainWindow):
             pixmap = pixmap.scaled(label.width(), label.height(), Qt.KeepAspectRatio)
             label.setPixmap(pixmap)
             label.setScaledContents(True)
-
             time.sleep(0.024)  # add a delay of 42 milliseconds (1/24th of a second)
-            
+
         vid.release()
 
 # Create a QApplication instance and show the window
