@@ -1,7 +1,7 @@
 from sys import argv, exit
 import threading
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QFileDialog, QCheckBox, QWidget, QSlider, QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QFileDialog, QCheckBox, QWidget
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
 import cv2, imutils
@@ -32,24 +32,11 @@ class Window(QMainWindow):
             "camera4": self.findChild(QCheckBox, "checkBox_4"),
             "camera5": self.findChild(QCheckBox, "checkBox_5"),
         }
-        self.anomalySlider = self.findChild(QSlider, "anomalySlider")
-        self.anomalySliderValue = self.findChild(QLabel, "anomalySliderValue")
-        self.anomalySlider.valueChanged.connect(self.update_anomaly_slider_value)
-        self.anomalySensitivity = 0.7
-
-        self.yoloComboBox = self.findChild(QComboBox, "yoloComboBox")
-        self.yoloComboBox.addItems(['Better performance', 'Better accuracy'])
-
-
-
-    def update_anomaly_slider_value(self, value):
-        self.anomalySensitivity = float(value)/100
-        self.anomalySliderValue.setText(str(self.anomalySensitivity))
-
 
     def closeEvent(self, event):
         self.started = False
         event.accept()
+
 
     def initialize_button(self):
         self.pushButton = self.findChild(QPushButton, "pushButton")
@@ -91,19 +78,15 @@ class Window(QMainWindow):
         yolo_queue = Queue(maxsize=1)
         anomaly_queue = Queue(maxsize=1)
         
-        try:
-            yolo_model = YOLO("yolov8n.pt") if self.yoloComboBox.currentText() == 'Better performance' else YOLO("yolov8s.pt")
-            yolo_model.predict(cv2.imread('logo.ico'), classes=0, verbose=False)
-        except Exception as e:
-                pass
-        
+        yolo_model = YOLO("yolov8n.pt")
+        yolo_model.predict(cv2.imread('logo.ico'), classes=0, verbose=False)
 
         def yolo_predict(image):
             nonlocal yolo_queue
             start_time = time.time()
             num_objects = len(yolo_model.predict(image, classes=0, verbose=False)[0])
             end_time = time.time()
-            #print("Execution time:", end_time - start_time, "seconds")
+            print("Execution time:", end_time - start_time, "seconds")
             try:
                 yolo_queue.put_nowait(num_objects)
             except Exception as e:
@@ -157,7 +140,7 @@ class Window(QMainWindow):
 
             text = "Number of people : " + str(num_objects)
             image = ps.putBText(image, text, text_offset_x=30, text_offset_y=30, vspace=20, hspace=10, font_scale=1.0, background_RGB=(228, 20, 222), text_RGB=(255, 255, 255))
-            anomaly_state = 'Anomaly' if anomaly_score > self.anomalySensitivity else 'Normal'
+            anomaly_state = 'Anomaly' if anomaly_score > 0.7 else 'Normal'
             text = "Anomaly State : " + str(anomaly_score)[:5] + " "+ anomaly_state
             image = ps.putBText(image, text, text_offset_x=30, text_offset_y=90, vspace=20, hspace=10, font_scale=1.0, background_RGB=(230, 230, 230), text_RGB=((10, 255, 10) if anomaly_state == 'Normal' else (255, 10, 10)))            
             label = self.centralwidget.findChild(QLabel, video_label)
