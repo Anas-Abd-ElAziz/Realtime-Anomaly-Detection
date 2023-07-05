@@ -11,16 +11,26 @@ import pyshine as ps
 from ultralytics import YOLO
 from queue import Queue, Empty
 import Full_Path as RTFM
-from PIL import Image
+from PIL import Image, ImageGrab
 import os
+from playsound import playsound
+import pygame
+import datetime
+import warnings
+warnings.filterwarnings("ignore")
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 os.environ['QT_LOGGING_RULES'] = "qt.gui.icc=false"
-root = ""
+
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi("gui.ui", self)
-        self.setWindowIcon(QtGui.QIcon('bus.jpg'))
+        self.setWindowIcon(QtGui.QIcon('assets//logo.ico'))
         self.setWindowTitle("Surveillance System")
         self.initialize_button()
         self.started = False
@@ -31,6 +41,10 @@ class Window(QMainWindow):
             "camera3": self.findChild(QCheckBox, "checkBox_3"),
             "camera4": self.findChild(QCheckBox, "checkBox_4"),
             "camera5": self.findChild(QCheckBox, "checkBox_5"),
+            "notification": self.findChild(QCheckBox, "checkBox_12"),
+            "screenshot": self.findChild(QCheckBox, "checkBox_13"),
+            "alert": self.findChild(QCheckBox, "checkBox_14"),
+            "bboxes": self.findChild(QCheckBox, "checkBox_15"),
         }
         self.anomalySlider = self.findChild(QSlider, "anomalySlider")
         self.anomalySliderValue = self.findChild(QLabel, "anomalySliderValue")
@@ -39,8 +53,6 @@ class Window(QMainWindow):
 
         self.yoloComboBox = self.findChild(QComboBox, "yoloComboBox")
         self.yoloComboBox.addItems(['Better performance', 'Better accuracy'])
-
-
 
     def update_anomaly_slider_value(self, value):
         self.anomalySensitivity = float(value)/100
@@ -59,12 +71,7 @@ class Window(QMainWindow):
     def pushButton_clicked(self):
         if self.started:
             self.started = False
-            self.pushButton.setText('Start')
-            #for i in range(6):
-                #label = self.centralwidget.findChild(QLabel, f"liveView_{i}")
-                #label.clear()
-                #label.setText(f"main camera") if i == 0 else label.setText(f"camera {i}")
-            
+            self.pushButton.setText('Start')    
         else:
             self.started = True
             self.pushButton.setText('Stop')
@@ -82,30 +89,27 @@ class Window(QMainWindow):
         self.liveViewCamera5 = threading.Thread(target=self.loadVideo,  args=('liveView_5',f"testVids//normal5.avi", self.checkboxes["camera5"].isChecked()))
         self.liveViewCamera5.start()
 
+
     def loadVideo(self, video_label, video_source, enabled):
         if not enabled:
             return
 
         vid = cv2.VideoCapture(video_source)
-        count = 0
         yolo_queue = Queue(maxsize=1)
         anomaly_queue = Queue(maxsize=1)
-        
-        try:
-            yolo_model = YOLO("yolov8n.pt") if self.yoloComboBox.currentText() == 'Better performance' else YOLO("yolov8s.pt")
-            yolo_model.predict(cv2.imread('logo.ico'), classes=0, verbose=False)
-        except Exception as e:
-                pass
+
+        yolo_model = YOLO("yolo//yolov8n.pt") if self.yoloComboBox.currentText() == 'Better performance' else YOLO("yolo//yolov8s.pt")
         
 
         def yolo_predict(image):
             nonlocal yolo_queue
-            start_time = time.time()
-            num_objects = len(yolo_model.predict(image, classes=0, verbose=False)[0])
-            end_time = time.time()
-            #print("Execution time:", end_time - start_time, "seconds")
             try:
-                yolo_queue.put_nowait(num_objects)
+                bbox = yolo_model.predict(image, classes=0, verbose=False)[0]
+            except Exception as e:
+                pass
+
+            try:
+                yolo_queue.put_nowait(bbox)
             except Exception as e:
                 pass
         
@@ -116,8 +120,40 @@ class Window(QMainWindow):
                 anomaly_queue.put_nowait(anomaly_score)
             except Exception as e:
                 pass
+        
+        def play_sound_alert():
+            pygame.mixer.init()
+            pygame.mixer.music.load("assets//alert.mp3")
+            pygame.mixer.music.play()
+            pygame.time.wait(3000)
+            pygame.mixer.music.stop()
+            pygame.mixer.quit()
+
+        def send_email_alert():
+            try:
+                email_from = "surveillance.system.ai@gmail.com"
+                email_to = "gemy212121@gmail.com"
+                subject = "Anomaly Alert!"
+                body = "An anomaly has been detected."
+                
+                msg = MIMEMultipart()
+                msg['From'] = email_from
+                msg['To'] = email_to
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body, 'plain'))
+                
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()
+                server.login(email_from, "nwgevudksgixckdn")
+                server.send_message(msg)
+                server.quit()
+                
+                print("Email alert sent!")
+            except Exception as e:
+                print("Error sending email alert:", str(e))
 
         num_objects = 0
+        bbox = None
         anomaly_score = 0
         frame_buffer = []
         current_prediction=-1
@@ -134,10 +170,20 @@ class Window(QMainWindow):
             frame_buffer.append(pil_img)
             image = imutils.resize(image, height=480)
 
-            if len(frame_buffer) % 12 == 0:
+            if self.checkboxes["bboxes"].isChecked():
+                bbox = yolo_model.predict(image, classes=0, verbose=False)[0]
+                num_objects = len(bbox) if bbox != None else 0
+                if bbox != None:
+                    for result in bbox:
+                        boxes = result.boxes
+                        for box in boxes:
+                            x, y, w, h = box.xywh[0]
+                            x1, y1, x2, y2 = int(x-w/2), int(y-h/2), int(x+w/2), int(y+h/2)
+                            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            elif len(frame_buffer) % 12 == 0 and not self.checkboxes["bboxes"].isChecked():
                 yolo_thread = threading.Thread(target=yolo_predict, args=(image,))
                 yolo_thread.start()
-
+                
             if len(frame_buffer) == 24:
                 if current_prediction != anomaly_score:
                     anomaly_thread = threading.Thread(target=anomaly_predict, args=(frame_buffer,))
@@ -146,7 +192,8 @@ class Window(QMainWindow):
                 frame_buffer = []
 
             try:
-                num_objects = yolo_queue.get_nowait()
+                bbox = yolo_queue.get_nowait()
+                num_objects = len(bbox) if bbox != None else 0
             except Empty:
                 pass
 
@@ -154,7 +201,7 @@ class Window(QMainWindow):
                 anomaly_score = anomaly_queue.get_nowait()
             except Empty:
                 pass
-
+          
             text = "Number of people : " + str(num_objects)
             image = ps.putBText(image, text, text_offset_x=30, text_offset_y=30, vspace=20, hspace=10, font_scale=1.0, background_RGB=(228, 20, 222), text_RGB=(255, 255, 255))
             anomaly_state = 'Anomaly' if anomaly_score > self.anomalySensitivity else 'Normal'
@@ -167,7 +214,22 @@ class Window(QMainWindow):
             pixmap = pixmap.scaled(label.width(), label.height(), Qt.KeepAspectRatio)
             label.setPixmap(pixmap)
             label.setScaledContents(True)
-            time.sleep(0.024)  # add a delay of 42 milliseconds (1/24th of a second)
+
+            if anomaly_score > self.anomalySensitivity:
+                if self.checkboxes["alert"].isChecked():
+                    self.checkboxes["alert"].setChecked(False)
+                    alert_thread = threading.Thread(target=play_sound_alert)
+                    alert_thread.start()
+                if self.checkboxes["screenshot"].isChecked():
+                    self.checkboxes["screenshot"].setChecked(False)
+                    screenshot = ImageGrab.grab()
+                    screenshot.save(f'screenshots/screenshot_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.png')
+                if self.checkboxes["notification"].isChecked():
+                    self.checkboxes["notification"].setChecked(False)
+                    send_email_thread = threading.Thread(target=send_email_alert)
+                    send_email_thread.start()
+
+            time.sleep(0.024)
 
         vid.release()
 

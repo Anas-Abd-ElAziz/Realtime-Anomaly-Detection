@@ -48,7 +48,7 @@ def oversample_data(data):
 
 def run(frames ,i3d, frequency, batch_size, sample_mode):
 	assert(sample_mode in ['oversample', 'center_crop'])
-	print("batchsize", batch_size)
+	#print("batchsize", batch_size)
 	chunk_size = 16
 	def forward_batch(b_data):
 		b_data = b_data.transpose([0, 4, 1, 2, 3])

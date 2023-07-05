@@ -22,9 +22,9 @@ def generate(frames, pretrainedpath, frequency, batch_size, sample_mode):
 		i3d.cuda()
 	i3d.train(False)  # Set model to evaluate mode
 	startime = time.time()
-	print("Preprocessing done..")
+	#print("Preprocessing done..")
 	features = run(frames, i3d, frequency, batch_size, sample_mode)
-	print("Obtained features of size: ", features.shape)
+	#print("Obtained features of size: ", features.shape)
 	#shutil.rmtree(temppath)
 	print("done in {0}.".format(time.time() - startime))
 	return features

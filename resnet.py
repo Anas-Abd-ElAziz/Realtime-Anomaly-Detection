@@ -195,7 +195,7 @@ def i3_res50(num_classes, pretrainedpath):
 	net = I3Res50(num_classes=num_classes, use_nl=False)
 	state_dict = torch.load(pretrainedpath)
 	net.load_state_dict(state_dict)
-	print("Received Pretrained model..")
+	#print("Received Pretrained model..")
 	# freeze_bn(net, "net") # Only needed for finetuning. For validation, .eval() works.
 	return net
 
